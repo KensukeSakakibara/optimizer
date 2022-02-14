@@ -190,6 +190,8 @@ namespace SuisuiTetris
 
             bool moveFlg = this.setMinoStagePos(this._activeMinoX - 1, this._activeMinoY);
             if (moveFlg) {
+                // SEを鳴らす
+                this._soundManager.PlaySe("Game_Move");
                 this._dropWaitTime = 0.0f;
                 this._dropWaitCancelCount += 1;
             }
@@ -211,6 +213,8 @@ namespace SuisuiTetris
 
             bool moveFlg = this.setMinoStagePos(this._activeMinoX - 1, this._activeMinoY);
             if (moveFlg) {
+                // SEを鳴らす
+                this._soundManager.PlaySe("Game_Move");
                 this._dropWaitTime = 0.0f;
                 this._dropWaitCancelCount += 1;
             }
@@ -233,6 +237,8 @@ namespace SuisuiTetris
 
             bool moveFlg = this.setMinoStagePos(this._activeMinoX + 1, this._activeMinoY);
             if (moveFlg) {
+                // SEを鳴らす
+                this._soundManager.PlaySe("Game_Move");
                 this._dropWaitTime = 0.0f;
                 this._dropWaitCancelCount += 1;
             }
@@ -254,6 +260,8 @@ namespace SuisuiTetris
 
             bool moveFlg = this.setMinoStagePos(this._activeMinoX + 1, this._activeMinoY);
             if (moveFlg) {
+                // SEを鳴らす
+                this._soundManager.PlaySe("Game_Move");
                 this._dropWaitTime = 0.0f;
                 this._dropWaitCancelCount += 1;
             }
@@ -581,6 +589,9 @@ namespace SuisuiTetris
                 // 回転したのであれば硬直にかかる時間をリセット
                 this._dropWaitTime = 0.0f;
                 this._dropWaitCancelCount += 2;
+
+                // SEを鳴らす
+                this._soundManager.PlaySe("Game_Move");
             } else {
                 this.spin(rightTurn);
             }
@@ -846,6 +857,9 @@ namespace SuisuiTetris
                 // 回転したのであれば硬直にかかる時間をリセット
                 this._dropWaitTime = 0.0f;
                 this._dropWaitCancelCount += 2;
+
+                // SEを鳴らす
+                this._soundManager.PlaySe("Game_Move");
 
             } else {
                 switch (this._activeMinoType) {
