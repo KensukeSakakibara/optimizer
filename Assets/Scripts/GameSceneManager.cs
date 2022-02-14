@@ -43,8 +43,6 @@ namespace SuisuiTetris
         private int _maxPosX = 9;    // ステージの横幅 0～9 constのがいいかも
         private int _maxPosY = 21;   // ステージの立幅 0～ 21 constのがいいかも
         private bool _holdFlg;       // ミノが落下する最中にホールドを１回のみに制限させるフラグ
-        private bool _dropWaitFlg;   // 落下終了してミノの硬直カウントを開始した場合にtrue
-        private float _dropWaitTime; // 落下終了してからの経過時間
         private int _deleteLineNum;  // 消したラインの数
         private int _renCountNum;    // 現在のレンの数
         private bool _renCountUpFlg; // レンが繋がっている間はtrue、レンが途切れたらfalseになる
@@ -57,6 +55,9 @@ namespace SuisuiTetris
         private int _activeMinoX;          // 現在操作しているミノの横位置 0～9
         private int _activeMinoY;          // 現在操作しているミノの縦位置 0～21
         private float _activeMinoFallTime; // 現在操作しているミノが次のマス目に落下するまでの経過時間、移動毎にゼロになる
+        private bool _dropWaitFlg;         // 落下終了してミノの硬直カウントを開始した場合にtrue
+        private float _dropWaitTime;       // 落下終了してからの経過時間
+        private int _dropWaitCancelCount;  // 硬直を拒否した回数
 
         // 最適化関連の属性
         private int _moveCount; // ミノを動かした回数のカウント（最適化モードのときに利用する）
@@ -102,6 +103,7 @@ namespace SuisuiTetris
             this._deleteLine.GetComponent<Text>().text = this._deleteLineNum.ToString("N0");
             this._dropWaitFlg = false;
             this._dropWaitTime = 0.0f;
+            this._dropWaitCancelCount = 0;
             this._holdFlg = false;
             this._speed = 3.0f;
             this._stagePos = new int[this._maxPosX + 1, this._maxPosY + 1];
@@ -186,7 +188,11 @@ namespace SuisuiTetris
                 }
             }
 
-            this.setMinoStagePos(this._activeMinoX - 1, this._activeMinoY);
+            bool moveFlg = this.setMinoStagePos(this._activeMinoX - 1, this._activeMinoY);
+            if (moveFlg) {
+                this._dropWaitTime = 0.0f;
+                this._dropWaitCancelCount += 1;
+            }
         }
 
         // 長押しで左移動を操作したとき
@@ -203,7 +209,11 @@ namespace SuisuiTetris
                 }
             }
 
-            this.setMinoStagePos(this._activeMinoX - 1, this._activeMinoY);
+            bool moveFlg = this.setMinoStagePos(this._activeMinoX - 1, this._activeMinoY);
+            if (moveFlg) {
+                this._dropWaitTime = 0.0f;
+                this._dropWaitCancelCount += 1;
+            }
         }
 
         // 右移動を操作したとき
@@ -221,7 +231,11 @@ namespace SuisuiTetris
                 }
             }
 
-            this.setMinoStagePos(this._activeMinoX + 1, this._activeMinoY);
+            bool moveFlg = this.setMinoStagePos(this._activeMinoX + 1, this._activeMinoY);
+            if (moveFlg) {
+                this._dropWaitTime = 0.0f;
+                this._dropWaitCancelCount += 1;
+            }
         }
 
         // 長押しで右移動を操作したとき
@@ -238,7 +252,11 @@ namespace SuisuiTetris
                 }
             }
 
-            this.setMinoStagePos(this._activeMinoX + 1, this._activeMinoY);
+            bool moveFlg = this.setMinoStagePos(this._activeMinoX + 1, this._activeMinoY);
+            if (moveFlg) {
+                this._dropWaitTime = 0.0f;
+                this._dropWaitCancelCount += 1;
+            }
         }
 
         // 下移動を操作したとき
@@ -359,11 +377,12 @@ namespace SuisuiTetris
                         this._dropWaitTime += Time.deltaTime;
                     } else {
                         this._dropWaitTime = 0.0f;
+                        this._dropWaitCancelCount = 0;
                         this._dropWaitFlg = true;
                     }
 
-                    // 硬直までにかかる時間が経過した場合にミノをチェンジ
-                    if (Constants.DROP_WAIT < this._dropWaitTime) {
+                    // 硬直までにかかる時間が経過した場合か、硬直拒否が20以上であればミノをチェンジ
+                    if (Constants.DROP_WAIT < this._dropWaitTime || 20 <= this._dropWaitCancelCount) {
                         this.changeNextMino();
                         this._activeMinoFallTime = 0.0f;
                     }
@@ -439,17 +458,19 @@ namespace SuisuiTetris
         }
 
         // ミノをステージのポジションにセットする
-        private void setMinoStagePos(int posX, int posY)
+        private bool setMinoStagePos(int posX, int posY)
         {
             // セットが可能かどうかをチェック
             if (!this.checkMinoSet(posX, posY) || this.isOutOfStage(posX, posY)) {
-                return;
+                return false;
             }
 
             // 移動実行
             this._activeMinoX = posX;
             this._activeMinoY = posY;
             this._activeMino.GetComponent<RectTransform>().anchoredPosition = new Vector2(posX * Constants.BOX_SIZE, posY * Constants.BOX_SIZE);
+
+            return true;
         }
 
         // ミノを作成する
@@ -556,7 +577,11 @@ namespace SuisuiTetris
             }
 
             // セットが可能かどうかをチェックしてセットできないのであればスピン
-            if (!this.checkAllOK(this._activeMinoX, this._activeMinoY)) {
+            if (this.checkAllOK(this._activeMinoX, this._activeMinoY)) {
+                // 回転したのであれば硬直にかかる時間をリセット
+                this._dropWaitTime = 0.0f;
+                this._dropWaitCancelCount += 2;
+            } else {
                 this.spin(rightTurn);
             }
         }
@@ -817,7 +842,12 @@ namespace SuisuiTetris
             }
 
             // スピンできなければ元に戻す
-            if (!spinFlg) {
+            if (spinFlg) {
+                // 回転したのであれば硬直にかかる時間をリセット
+                this._dropWaitTime = 0.0f;
+                this._dropWaitCancelCount += 2;
+
+            } else {
                 switch (this._activeMinoType) {
                     case Constants.MINO_TYPE_I:
                         this._activeMino.GetComponent<IminoAction>().Turn(!rightTurn);
