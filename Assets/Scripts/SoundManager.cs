@@ -11,9 +11,11 @@ namespace SuisuiTetris
     {
         private AudioSource _bgmAudioSource;
         private AudioSource _jingleAudioSource;
+        private AudioSource[] _seAudioSources;
 
         private AudioClip _seGameMove;
 
+        private int _audioSourceCount = 10;
         private bool _startFlg = true;
         private string _beforSceneName;
 
@@ -45,6 +47,12 @@ namespace SuisuiTetris
             }
             if (this._jingleAudioSource == null) {
                 this._jingleAudioSource = this.gameObject.AddComponent<AudioSource>();
+            }
+            if (this._seAudioSources == null) {
+                this._seAudioSources = new AudioSource[this._audioSourceCount];
+                for (int i = 0; i < this._audioSourceCount; i++) {
+                    this._seAudioSources[i] = this.gameObject.AddComponent<AudioSource>();
+                }
             }
 
             // SEは予め全種類保持しておく
@@ -131,30 +139,30 @@ namespace SuisuiTetris
         }
 
         // SEの実行
-        public async UniTask PlaySe(string seResourceName)
+        public void PlaySe(string seResourceName)
         {
-            // オーディオソースをアタッチする
-            AudioSource seAudioSource = this.gameObject.AddComponent<AudioSource>();
+            // 再生されていないAudioSourceを探す
+            AudioSource seAudioSource = new AudioSource();
+            for (int i = 0; i < this._audioSourceCount; i++) {
+                if (this._seAudioSources[i].isPlaying) {
+                    continue;
+                }
+                seAudioSource = this._seAudioSources[i];
+            }
 
-            // 読み込み前とかでちゃんと作成できなかったら処理しない
+            // 全部再生中だった場合は仕方ないので最初のSEを停止させて利用する
             if (seAudioSource == null) {
-                return;
+                seAudioSource = this._seAudioSources[0];
+                seAudioSource.Stop();
             }
 
             switch (seResourceName) {
                 case "Game_Move":
                     seAudioSource.clip = this._seGameMove;
                     seAudioSource.volume = 0.7f;
+                    seAudioSource.Play();
                     break;
             }
-
-            if (seAudioSource.clip != null) {
-                seAudioSource.Play();
-                await UniTask.WaitWhile(() => seAudioSource.isPlaying);
-            }
-
-            // 再生終了後に消去する
-            Destroy(seAudioSource);
         }
 
         // Jingleの実行
